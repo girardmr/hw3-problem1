@@ -1,4 +1,5 @@
 clear all
+close all
 clc
 
 field_init(-1);
@@ -69,30 +70,24 @@ corrected = zeros(rows_2, columns);
 row_index = [1:rows];
 
 for jj = 1:columns
-    corrected(n(jj):n(jj)+rows-1,jj) = image_data(1:rows,jj);
+    corrected1(n(jj):n(jj)+rows-1,jj) = image_data(1:rows,jj);
 end
 
-psf_rows = rows_2-6500;
-psf_cut = zeros(psf_rows,columns);
- 
-for kk = 1:columns
-     psf_cut(1:psf_rows,kk) = corrected(6501:rows_2,kk);
-end 
-
-min_value = min(min(corrected));
-max_value = max(max(corrected));
-min_cut = min(min(psf_cut));
-max_cut = max(max(psf_cut));
+min_value = min(min(corrected1));
+max_value = max(max(corrected1));
 
 figure;
-imagesc(corrected,[min_value,max_value]);
+imagesc(corrected1,[min_value,max_value]);
 colormap('gray');
-title('PSF, scatterers from 55 mm to 85 mm');
+title('PSF, scatterers from 55 mm to 85 mm; base case');
+
+min_val1 = min(min(20*log10(abs(hilbert(corrected1)))));
+max_val1 = max(max(20*log10(abs(hilbert(corrected1)))));
 
 figure;
-imagesc(20*log10(abs(hilbert(corrected))));
+imagesc(20*log10(abs(hilbert(corrected1))),[min_val1 max_val1]);
 colormap('gray');
-title('Compressed envelope, scatterers from 55 mm to 85 mm');
+title('Compressed envelope, scatterers from 55 mm to 85 mm; base case');
 
 
 %DYNAMIC RECEIVE
@@ -161,28 +156,22 @@ corrected = zeros(rows_2, columns);
 row_index = [1:rows];
 
 for jj = 1:columns
-    corrected(n(jj):n(jj)+rows-1,jj) = image_data(1:rows,jj);
+    corrected2(n(jj):n(jj)+rows-1,jj) = image_data(1:rows,jj);
 end
 
-psf_rows = rows_2-6500;
-psf_cut = zeros(psf_rows,columns);
- 
-for kk = 1:columns
-     psf_cut(1:psf_rows,kk) = corrected(6501:rows_2,kk);
-end 
-
-min_value = min(min(corrected));
-max_value = max(max(corrected));
-min_cut = min(min(psf_cut));
-max_cut = max(max(psf_cut));
+min_value = min(min(corrected2));
+max_value = max(max(corrected2));
 
 figure;
-imagesc(corrected,[min_value,max_value]);
+imagesc(corrected2,[min_value,max_value]);
 colormap('gray');
 title('PSF, scatterers from 55 mm to 85 mm; dynamic receive');
 
+min_val2 = min(min(20*log10(abs(hilbert(corrected2)))));
+max_val2 = max(max(20*log10(abs(hilbert(corrected2)))));
+
 figure;
-imagesc(20*log10(abs(hilbert(corrected))));
+imagesc(20*log10(abs(hilbert(corrected2))),[min_val2 max_val2]);
 colormap('gray');
 title('Compressed envelope, scatterers from 55 mm to 85 mm; dynamic receive');
 
@@ -190,3 +179,45 @@ title('Compressed envelope, scatterers from 55 mm to 85 mm; dynamic receive');
 
 %%part B
 
+depth_mm = [55 60 65 70 75 80 85];
+depth_m = depth_mm/1000;
+time_to_target = depth_m/c;
+row_ind1 = round(time_to_target*fs*2);
+offset = 7242-row_ind1(1);
+row_index = row_ind1 + offset;
+
+base_case_abs = abs(hilbert(corrected1));
+dyn_rec_abs = abs(hilbert(corrected2));
+
+%base case
+for a = 1:length(depth_mm)
+    figure;
+    row_data = 20*log10(base_case_abs(row_index(a),:,1));
+    peak_val = max(row_data);
+    normalized = row_data-peak_val;
+    plot(normalized);
+    title('base case');
+    aboven6dB = normalized > -6;
+    pixel_width(a) = sum(aboven6dB);
+    width_basecase(a) = pixel_width(a)*d_theta;
+end
+
+%dynamic receive
+for a = 1:length(depth_mm)
+    figure;
+    row_data = 20*log10(dyn_rec_abs(row_index(a),:,1));
+    peak_val = max(row_data);
+    normalized = row_data-peak_val;
+    plot(normalized);
+    title('base case');
+    aboven6dB = normalized > -6;
+    pixel_width(a) = sum(aboven6dB);
+    width_dynrec(a) = pixel_width(a)*d_theta;
+end
+
+figure;
+plot(width_basecase);
+title('-6dB width; base case')
+figure;
+plot(width_dynrec);
+title('-6dB width; dynamic receive');
